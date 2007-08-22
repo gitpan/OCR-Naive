@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+# $Id: ocr,v 1.1 2007/08/20 15:19:01 dk Exp $
+
+use strict;
+use subs qw(log);
+
+use Prima::noARGV;
+use Prima::noX11;
+use Getopt::Long;
+use OCR::Naive qw(:all);
+
+my ( 
+	%options,
+	$db, @sorted_glyphs,
+	@curr_ext, @curr_pos, $curr_glyph, $curr_index, $curr_entry,
+);
+
+%options = (
+	verbose  => 0,
+	dict     => 'dict',
+	help     => 0,
+);
+
+GetOptions( \%options,
+	'verbose',
+	'help',
+	'dict=s',
+) or usage();
+
+usage() if $options{help};
+
+1 == @ARGV or usage();
+
+sub usage
+{
+	print <<USAGE;
+
+$0 - OCR an image
+
+options:
+   --verbose   - be verbose
+   --help      - show this text
+
+   --dict=FILE - load from dictionary FILE, save changes there
+
+USAGE
+	exit 1;
+}
+
+sub log { warn join('',@_), "\n" if $options{verbose} }
+
+log "loading $ARGV[0]";
+
+my $i = Prima::Image-> load( $ARGV[0]);
+die "Cannot load $ARGV[0]:$@\n" unless $i;
+
+log "loaded ", ( $i-> type & im::BPP), " bpp image ", $i-> width, "x", $i-> height;
+
+# load db
+$db = load_dictionary( $options{dict} );
+die "Cannot open dictionary $options{dict}:$!\n" 
+	unless $db;
+log scalar(keys %$db), " glyphs loaded";
+die "DB is empty, aborting" unless scalar keys %$db;
+
+$i = enhance_image( $i, verbose => $options{verbose});
+
+my @text = recognize( $i, $db, verbose => $options{verbose});
+print "$_\n" for @text;
