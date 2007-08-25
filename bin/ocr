@@ -1,11 +1,16 @@
 #!/usr/bin/perl
-# $Id: ocr,v 1.1 2007/08/20 15:19:01 dk Exp $
+# $Id: ocr,v 1.2 2007/08/25 11:19:39 dk Exp $
 
 use strict;
 use subs qw(log);
 
-use Prima::noARGV;
-use Prima::noX11;
+BEGIN
+{
+	local @ARGV;
+	use Prima::noX11;
+	use Prima;
+}
+
 use Getopt::Long;
 use OCR::Naive qw(:all);
 

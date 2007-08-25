@@ -1,4 +1,4 @@
-# $Id: Naive.pm,v 1.4 2007/08/21 14:05:23 dk Exp $
+# $Id: Naive.pm,v 1.6 2007/08/22 20:14:45 dk Exp $
 package OCR::Naive;
 
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 use Prima;
 require Exporter;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 use base qw(Exporter);
 
 our @EXPORT_OK   = qw(
@@ -286,11 +286,8 @@ sub recognize
 		for ( @vlines) {
 			$max_chars_in_line = @$_ if $max_chars_in_line < @$_;
 		}
-		# - and changes that each character is next to a space, are very low. So, assuming that
-		# not all characters are next to a space, we get width less than which we don't count 
-		# as a ('space').
-		$minspace = int(($i-> width - $max_chars_in_line * $ave_width) / $max_chars_in_line - 1);
-		warn "minspace: $minspace\n"
+		$minspace = int($ave_width + .5);
+		warn "minspace: $minspace \n"
 			if $options{verbose};
 	} else {
 		$minspace = $options{minspace};

@@ -31,10 +31,15 @@ make
 make test
 sudo make install
 
-Example
-=======
+Examples
+========
 
 perl -Iblib/lib bin/makedict -v --dict=examples/dict examples/vim.png
 
-Run this and see how makedict tries to detect glyphs. Note that it 
-the first glyph it fails to detect is inverted ('semicolon').
+   Run this and see how makedict tries to detect glyphs. Note that it 
+   the first glyph it fails to detect is inverted ('semicolon').
+
+
+perl -Iblib/lib bin/ocr -v --dict=examples/dict examples/xterm.png
+
+   some text must come outt

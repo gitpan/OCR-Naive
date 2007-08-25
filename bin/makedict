@@ -1,11 +1,15 @@
 #!/usr/bin/perl
-# $Id: makedict,v 1.1 2007/08/20 15:19:01 dk Exp $
+# $Id: makedict,v 1.2 2007/08/25 11:19:39 dk Exp $
 
 use strict;
 use subs qw(log);
 
-use Prima::noARGV;
-use Prima qw(Application ImageViewer Label InputLine Buttons MsgBox);
+
+BEGIN {
+	local @ARGV;
+	use Prima qw(Application ImageViewer Label InputLine Buttons MsgBox);
+}
+
 use Getopt::Long;
 use IPA;
 use IPA::Geometry qw(rotate90);
@@ -79,7 +83,7 @@ sub split_horizontal
 {
 	my $i = shift;
 	# split by horizontal lines
-	my $linesize = $i-> lineSize;
+	my $linesize = int(( $i->width * ( $i-> type & im::BPP) + 31) / 32) * 4;
 	my $data     = $i-> data;
 	my @chunks   = ([0,0]);
 	my $h        = $i-> height;
@@ -108,7 +112,7 @@ sub cut_horizontal
 {
 	my $i = shift;
 	# cut horizontal lines hanging on and off
-	my $linesize = $i-> lineSize;
+	my $linesize = int(( $i->width * ( $i-> type & im::BPP) + 31) / 32) * 4;
 	my $data     = $i-> data;
 	my @chunks   = ([0,0]);
 	my $h        = $i-> height;
