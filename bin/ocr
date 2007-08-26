@@ -4,11 +4,10 @@
 use strict;
 use subs qw(log);
 
-BEGIN
-{
-	local @ARGV;
-	use Prima::noX11;
-	use Prima;
+BEGIN { 
+	local @ARGV; 
+	require Prima::noX11; 
+	require Prima; 
 }
 
 use Getopt::Long;

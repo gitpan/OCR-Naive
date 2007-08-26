@@ -4,12 +4,9 @@
 use strict;
 use subs qw(log);
 
+BEGIN { local @ARGV; require Prima; }
 
-BEGIN {
-	local @ARGV;
-	use Prima qw(Application ImageViewer Label InputLine Buttons MsgBox);
-}
-
+use Prima qw(Application ImageViewer Label InputLine Buttons MsgBox);
 use Getopt::Long;
 use IPA;
 use IPA::Geometry qw(rotate90);
