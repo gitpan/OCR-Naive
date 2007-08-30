@@ -1,4 +1,4 @@
-# $Id: Naive.pm,v 1.6 2007/08/22 20:14:45 dk Exp $
+# $Id: Naive.pm,v 1.7 2007/08/29 12:04:34 dk Exp $
 package OCR::Naive;
 
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 use Prima;
 require Exporter;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 use base qw(Exporter);
 
 our @EXPORT_OK   = qw(
@@ -33,7 +33,7 @@ sub load_dictionary
 			warn ("malformed line in $file, line $.\n");
 			next;
 		}
-		s/\\(.)/./g for values %k;
+		s/\\(.)/$1/g for values %k;
 		if ( $k{w} <= 0 or $k{h} <= 0) {
 			warn ("malformed line in $file, line $.\n");
 			next;
