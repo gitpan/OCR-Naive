@@ -1,4 +1,4 @@
-# $Id: Naive.pm,v 1.7 2007/08/29 12:04:34 dk Exp $
+# $Id: Naive.pm,v 1.11 2007/09/16 19:53:09 dk Exp $
 package OCR::Naive;
 
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 use Prima;
 require Exporter;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 use base qw(Exporter);
 
 our @EXPORT_OK   = qw(
@@ -67,7 +67,7 @@ sub save_dictionary
 	while ( my ( $k, $v) = each %$db) {
 		next unless defined $v-> {text};
 		my $t = $v->{text};
-		$k =~ s/(.)/sprintf("%02x",ord($1))/ge;
+		$k =~ s/(.)/sprintf("%02x",ord($1))/ges;
 		$t =~ s/(['\\])/\\$1/ge;
 		print DB "t='$t' w='$v->{width}' h='$v->{height}' d='$k'\n";
 	}
@@ -107,7 +107,7 @@ sub find_images
   		study $G;
 		my @loc_ret;
 		while ( 1) {
-		        unless ( $G =~ m/\G.*?$rx/gc) {
+		        unless ( $G =~ m/\G.*?$rx/gcs) {
 				return unless $multiple;
 				last;
 			}
@@ -156,7 +156,7 @@ sub enhance_image
 	require IPA::Misc;
 	require IPA::Point;
 
-	my $min_contrast = $options{min_contrast} || 32;
+	my $min_contrast = $options{min_contrast} || 128;
 
 	# convert to grayscale
 	$i-> type(im::Byte);
@@ -214,6 +214,7 @@ sub recognize
 	
 	# OCR and get glyph positions
 	my $num = 0;
+	my $max_line_height = 1;
 	my @vmap = ( 0 x ( $i-> height));
 	my @unsorted = map { 
 		my $v = $_;
@@ -224,9 +225,9 @@ sub recognize
 			# erase glyphs
 			$i-> put_image( @$p, $v-> {image}, rop::Blackness);
 			# put on vmap
-			$vmap[ $$p[1] + $_ ] = 1 for 0 .. $h;
+			$vmap[ $$p[1] + $_ ]++ for 0 .. $h;
 		}
-	
+		$max_line_height = $h + 1 if $max_line_height <= $h;
 		$num++; 
 		
 		warn "$num/", scalar(@sorted_glyphs), ", '$v->{text}' found ", scalar(@positions), " times\n"
@@ -234,32 +235,72 @@ sub recognize
 		
 		map { [ $v, @$_ ] } @positions;
 	} @$db { @sorted_glyphs  };
+	$max_line_height *= 2;
+	warn "max line height $max_line_height\n"
+		if $options{verbose};
 	
-	# vmap-> occupied ranges; detect number of lines
-	my ( @vlines, %ranges);
+	# vmap-> rle vmap
 	{
-		my @chunks   = ([0,0]);
+		my @chunks   = ([]);
 		for ( my $j = 0; $j < @vmap; $j++) {
 			if ( $vmap[$j]) {
-				$chunks[-1]-> [0] = $j if $chunks[-1]-> [1] == 0;
-				$chunks[-1]-> [1]++;
+				push @{ $chunks[-1] }, $j unless @{ $chunks[-1] };
+				push @{ $chunks[-1] }, $vmap[$j];
 			} else {
-				push @chunks, [0,0] if $chunks[-1]-> [1];
+				push @chunks, [] if @{ $chunks[-1] };
 			}
 		}
-		for my $chunk ( @chunks) {
-			next unless $chunk-> [1];
-			warn "new vline start $chunk->[0] height $chunk->[1]\n"
-				if $options{verbose};
-			push @vlines, [];
-			for ( my $i = 0; $i < $chunk->[1]; $i++) {
-				$ranges{ $chunk->[0] + $i } = $#vlines;
-			}
-		}
-		undef @vmap;
-		warn "glyphs grouped in " ,scalar(@vlines), " lines of text\n"
-			if $options{verbose};
+		@vmap = @chunks;
 	}
+
+	# vmap-> occupied ranges; detect number of lines
+	my ( @ready_vmap);
+	while ( @vmap) {
+		my @new;
+		for my $v ( @vmap) {
+			if ( $#$v > $max_line_height) {
+				# split further -- subtract the minimum
+				my $min = $v->[1];
+				for ( @$v) {
+					$min = $_ if $min > $_;
+				}
+				my @new_chunks = [];
+				for ( my $i = 1; $i < @$v; $i++) {
+					my $reduced = $v->[$i] - $min;
+					if ( $reduced > 0) {
+						push @{ $new_chunks[-1]}, $v->[0] + $i - 1
+							unless @{ $new_chunks[-1] };
+						push @{ $new_chunks[-1]}, $reduced;
+					} else {
+						push @new_chunks, [ $v-> [0] + $i - 1, 1], [];
+					}
+				}
+				@new_chunks = grep { @$_ } @new_chunks;
+				push @new, @new_chunks;
+				warn "too wide vline $v->[0]:$#$v split into ", 
+					scalar( @new_chunks), " chunks\n"
+						if $options{verbose};
+				# warn "@$_\n" for @new_chunks;
+			} else {
+				warn "new vline $v->[0]:$#$v\n"
+					if $options{verbose};
+				push @ready_vmap, $v;
+			}
+		}
+		@vmap = @new;
+	}
+
+	# assign Y-> textline map
+	my ( @vlines, %ranges);
+	for my $v ( sort { $a->[0] <=> $b->[0] } @ready_vmap) {
+		push @vlines, [];
+		for ( my $i = 0; $i < $#$v; $i++) {
+			$ranges{ $v->[0] + $i } = $#vlines;
+		}
+	}
+	undef @ready_vmap;
+	warn "glyphs grouped in " ,scalar(@vlines), " lines of text\n"
+		if $options{verbose};
 	
 	# put glyphs into lines sorted by X
 	for ( @unsorted) {
@@ -270,8 +311,6 @@ sub recognize
 	# sort vlines
 	for ( @vlines) {
 		@$_ = sort { $$a[1] <=> $$b[1] } @$_;
-		warn "vline: ", scalar(@$_), " letters\n"
-			if $options{verbose};
 	}
 
 	my $minspace;
