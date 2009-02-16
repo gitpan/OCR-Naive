@@ -1,4 +1,4 @@
-# $Id: Naive.pm,v 1.11 2007/09/16 19:53:09 dk Exp $
+# $Id: Naive.pm,v 1.13 2009/02/10 08:04:55 dk Exp $
 package OCR::Naive;
 
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 use Prima;
 require Exporter;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 use base qw(Exporter);
 
 our @EXPORT_OK   = qw(
@@ -194,7 +194,7 @@ sub enhance_image
 	if ( $bg > $fg) {
 		warn "invert\n"
 			if $options{verbose};
-		$i-> data( ~$i-> data);
+		$i-> put_image( 0, 0, $i, rop::NotPut);
 		( $bg, $fg) = ( $fg, $bg);
 	}
 	
@@ -359,7 +359,7 @@ sub recognize
 
 =head1 NAME
 
-OCR::Naive - convert images into text in a extremely naive fashion
+OCR::Naive - convert images into text in an extremely naive fashion
 
 =head1 DESCRIPTION
 

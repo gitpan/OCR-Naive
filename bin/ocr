@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: ocr,v 1.5 2007/09/16 05:46:46 dk Exp $
+# $Id: ocr,v 1.6 2009/02/10 08:04:55 dk Exp $
 
 use strict;
 use subs qw(log);
@@ -26,6 +26,7 @@ my (
 	screen   => 0,
 	sleep    => undef,
 	contrast => 128,
+	minspace => undef,
 );
 
 GetOptions( \%options,
@@ -35,6 +36,7 @@ GetOptions( \%options,
 	'dict=s',
 	'sleep=i',
 	'contrast=i',
+	'minspace=i',
 ) or usage();
 
 usage() if $options{help};
@@ -57,6 +59,8 @@ options:
    --sleep=SEC      - sleep SECONDS before grabbing from screen
    --contrast=INT   - minimal contrast (0-255) between assumed foreground 
                       and background. default: 128
+   --minspace=INT   - minimal width in pixel for space. 
+                      calculated automatically by default
 
 USAGE
 	exit 1;
@@ -92,5 +96,5 @@ $i = enhance_image( $i,
 	min_contrast => $options{contrast},
 );
 
-my @text = recognize( $i, $db, verbose => $options{verbose});
+my @text = recognize( $i, $db, verbose => $options{verbose}, minspace => $options{minspace});
 print "$_\n" for @text;
